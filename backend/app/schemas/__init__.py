@@ -1,4 +1,4 @@
-from app.schemas.channel import ChannelRead
+from app.schemas.channel import ChannelRead, TwitchChannel
 from app.schemas.chat import ChatMessageRead
 from app.schemas.clip import ClipRead
 from app.schemas.query import QueryRequest, QueryResponse, QuerySource
@@ -11,5 +11,6 @@ __all__ = [
     "QueryRequest",
     "QueryResponse",
     "QuerySource",
+    "TwitchChannel",
     "VodRead",
 ]

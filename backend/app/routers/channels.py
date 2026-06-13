@@ -1,15 +1,33 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from typing import Annotated
 
-from app.schemas import ChannelRead, ClipRead, VodRead
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.schemas import ClipRead, TwitchChannel, VodRead
+from app.services.twitch import TwitchClient, get_twitch_client
 
 router = APIRouter(prefix="/channel", tags=["channels"])
 
 _NOT_IMPLEMENTED = "Not implemented yet"
 
+TwitchDep = Annotated[TwitchClient, Depends(get_twitch_client)]
 
-@router.get("/{username}", response_model=ChannelRead)
-async def get_channel(username: str) -> ChannelRead:
-    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, _NOT_IMPLEMENTED)
+
+@router.get("/{username}", response_model=TwitchChannel)
+async def get_channel(username: str, twitch: TwitchDep) -> TwitchChannel:
+    user = await twitch.get_user(username)
+    if user is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"Channel '{username}' not found"
+        )
+    return TwitchChannel(
+        twitch_id=user["id"],
+        login=user["login"],
+        display_name=user["display_name"],
+        description=user.get("description", ""),
+        profile_image_url=user.get("profile_image_url", ""),
+        broadcaster_type=user.get("broadcaster_type", ""),
+        created_at=user.get("created_at"),
+    )
 
 
 @router.get("/{username}/vods", response_model=list[VodRead])

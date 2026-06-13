@@ -11,6 +11,6 @@ def test_health_ok() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_channel_endpoint_registered_but_stubbed() -> None:
-    response = client.get("/api/v1/channel/yugi2x")
+def test_unimplemented_endpoint_returns_501() -> None:
+    response = client.get("/api/v1/vod/123/chat")
     assert response.status_code == 501
