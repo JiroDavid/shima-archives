@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Twitch
     twitch_client_id: str = ""
     twitch_client_secret: str = ""
-    twitch_redirect_uri: str = "http://localhost:8000/api/v1/auth/twitch/callback"
+    twitch_redirect_uri: str = "https://localhost:8000/api/v1/auth/twitch/callback"
 
     # Embeddings / LLM
     openai_api_key: str = ""
