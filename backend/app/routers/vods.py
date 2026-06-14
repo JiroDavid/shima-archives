@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.schemas import ChatMessageRead, TwitchVod
+from app.schemas import TwitchVod, VodComment
 from app.services.twitch import TwitchClient, get_twitch_client
 
 router = APIRouter(tags=["vods"])
@@ -34,9 +34,19 @@ async def list_vods(user_id: str, twitch: TwitchDep) -> list[TwitchVod]:
     ]
 
 
-@router.get("/vod/{vod_id}/chat", response_model=list[ChatMessageRead])
-async def get_vod_chat(vod_id: str) -> list[ChatMessageRead]:
-    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, _NOT_IMPLEMENTED)
+@router.get("/vod/{vod_id}/chat", response_model=list[VodComment])
+async def get_vod_chat(vod_id: str, twitch: TwitchDep) -> list[VodComment]:
+    comments = await twitch.get_vod_comments(vod_id)
+    return [
+        VodComment(
+            username=c.get("commenter", {}).get("display_name", ""),
+            message=c.get("message", {}).get("body", ""),
+            offset_seconds=c.get("content_offset_seconds", 0.0),
+            created_at=c.get("created_at"),
+            color=c.get("message", {}).get("user_color") or "",
+        )
+        for c in comments
+    ]
 
 
 @router.get("/vod/{vod_id}/stream-url")

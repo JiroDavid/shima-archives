@@ -12,5 +12,5 @@ def test_health_ok() -> None:
 
 
 def test_unimplemented_endpoint_returns_501() -> None:
-    response = client.get("/api/v1/vod/123/chat")
+    response = client.get("/api/v1/vod/123/stream-url")
     assert response.status_code == 501

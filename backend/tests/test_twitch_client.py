@@ -138,6 +138,83 @@ async def test_get_videos_sends_user_id_and_archive_type() -> None:
     await client.aclose()
 
 
+def _make_comment(offset: float) -> dict[str, Any]:
+    return {
+        "_id": f"c{offset}",
+        "created_at": "2024-01-01T00:00:00Z",
+        "content_offset_seconds": offset,
+        "commenter": {"display_name": "Bob", "name": "bob"},
+        "message": {"body": f"msg {offset}", "user_color": "#FF0000"},
+    }
+
+
+async def test_get_vod_comments_returns_comments() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        return httpx.Response(
+            200, json={"comments": [_make_comment(1.0), _make_comment(2.0)]}
+        )
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    comments = await client.get_vod_comments("987654")
+
+    assert [c["content_offset_seconds"] for c in comments] == [1.0, 2.0]
+    await client.aclose()
+
+
+async def test_get_vod_comments_paginates_until_next_empty() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        cursor = request.url.params.get("cursor")
+        if cursor is None:
+            return httpx.Response(
+                200, json={"comments": [_make_comment(1.0)], "_next": "page2"}
+            )
+        return httpx.Response(200, json={"comments": [_make_comment(2.0)]})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    comments = await client.get_vod_comments("987654")
+
+    assert [c["content_offset_seconds"] for c in comments] == [1.0, 2.0]
+    await client.aclose()
+
+
+async def test_get_vod_comments_requests_correct_path_and_auth() -> None:
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        captured["path"] = request.url.path
+        captured["authorization"] = request.headers.get("Authorization", "")
+        captured["client_id"] = request.headers.get("Client-Id", "")
+        return httpx.Response(200, json={"comments": []})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    await client.get_vod_comments("987654")
+
+    assert captured["path"] == "/helix/videos/987654/comments"
+    assert captured["authorization"] == "Bearer app-token"
+    await client.aclose()
+
+
 async def test_get_user_sends_auth_and_client_id_headers() -> None:
     captured: dict[str, str] = {}
 

@@ -32,3 +32,17 @@ class TwitchVod(BaseModel):
     view_count: int = 0
     type: str = "archive"
     viewable: str = "public"
+
+
+class VodComment(BaseModel):
+    """A single VOD chat-replay comment from the Twitch comments endpoint.
+
+    ``offset_seconds`` is the position in the VOD the message was sent at, used
+    to sync chat replay with the player.
+    """
+
+    username: str
+    message: str
+    offset_seconds: float
+    created_at: datetime | None = None
+    color: str = ""

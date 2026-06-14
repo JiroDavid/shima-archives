@@ -2,7 +2,7 @@ from app.schemas.channel import ChannelRead, TwitchChannel
 from app.schemas.chat import ChatMessageRead
 from app.schemas.clip import ClipRead
 from app.schemas.query import QueryRequest, QueryResponse, QuerySource
-from app.schemas.vod import TwitchVod, VodRead
+from app.schemas.vod import TwitchVod, VodComment, VodRead
 
 __all__ = [
     "ChannelRead",
@@ -13,5 +13,6 @@ __all__ = [
     "QuerySource",
     "TwitchChannel",
     "TwitchVod",
+    "VodComment",
     "VodRead",
 ]

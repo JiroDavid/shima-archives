@@ -87,6 +87,32 @@ class TwitchClient:
                 break
         return videos
 
+    async def get_vod_comments(self, vod_id: str) -> list[dict[str, Any]]:
+        """Fetch a VOD's full chat replay, following the comment cursor.
+
+        Uses the unofficial-but-stable ``/videos/{id}/comments`` endpoint;
+        pages via the ``_next`` cursor until exhausted.
+        """
+        token = await self._ensure_app_token()
+        headers = {
+            "Client-Id": settings.twitch_client_id,
+            "Authorization": f"Bearer {token}",
+        }
+        comments: list[dict[str, Any]] = []
+        cursor: str | None = None
+        while True:
+            params = {"cursor": cursor} if cursor is not None else {}
+            response = await self._client.get(
+                f"/videos/{vod_id}/comments", params=params, headers=headers
+            )
+            response.raise_for_status()
+            payload = response.json()
+            comments.extend(payload.get("comments", []))
+            cursor = payload.get("_next")
+            if not cursor:
+                break
+        return comments
+
     async def aclose(self) -> None:
         await self._client.aclose()
 
