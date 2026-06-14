@@ -53,6 +53,40 @@ class TwitchClient:
         data: list[dict[str, Any]] = response.json().get("data", [])
         return data[0] if data else None
 
+    async def get_videos(
+        self, user_id: str, video_type: str = "archive"
+    ) -> list[dict[str, Any]]:
+        """Fetch all of a channel's videos, following pagination cursors.
+
+        Defaults to ``archive`` (past broadcasts / VODs, including unlisted ones
+        the token can see).
+        """
+        token = await self._ensure_app_token()
+        headers = {
+            "Client-Id": settings.twitch_client_id,
+            "Authorization": f"Bearer {token}",
+        }
+        videos: list[dict[str, Any]] = []
+        cursor: str | None = None
+        while True:
+            params: dict[str, str] = {
+                "user_id": user_id,
+                "type": video_type,
+                "first": "100",
+            }
+            if cursor is not None:
+                params["after"] = cursor
+            response = await self._client.get(
+                "/videos", params=params, headers=headers
+            )
+            response.raise_for_status()
+            payload = response.json()
+            videos.extend(payload.get("data", []))
+            cursor = payload.get("pagination", {}).get("cursor")
+            if not cursor:
+                break
+        return videos
+
     async def aclose(self) -> None:
         await self._client.aclose()
 
