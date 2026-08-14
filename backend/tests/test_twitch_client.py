@@ -138,6 +138,45 @@ async def test_get_videos_sends_user_id_and_archive_type() -> None:
     await client.aclose()
 
 
+async def test_get_video_returns_video_when_present() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        assert request.url.params.get("id") == "987654"
+        return httpx.Response(200, json={"data": [_make_video("987654")]})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    video = await client.get_video("987654")
+
+    assert video is not None
+    assert video["id"] == "987654"
+    assert video["user_id"] == "12345"
+    await client.aclose()
+
+
+async def test_get_video_returns_none_when_absent() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        return httpx.Response(200, json={"data": []})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    video = await client.get_video("ghost")
+
+    assert video is None
+    await client.aclose()
+
+
 def _make_comment(offset: float) -> dict[str, Any]:
     return {
         "_id": f"c{offset}",

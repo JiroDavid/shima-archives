@@ -87,6 +87,21 @@ class TwitchClient:
                 break
         return videos
 
+    async def get_video(self, vod_id: str) -> dict[str, Any] | None:
+        """Fetch a single video's metadata by id, or None if it does not exist."""
+        token = await self._ensure_app_token()
+        response = await self._client.get(
+            "/videos",
+            params={"id": vod_id},
+            headers={
+                "Client-Id": settings.twitch_client_id,
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        response.raise_for_status()
+        data: list[dict[str, Any]] = response.json().get("data", [])
+        return data[0] if data else None
+
     async def get_vod_comments(self, vod_id: str) -> list[dict[str, Any]]:
         """Fetch a VOD's full chat replay, following the comment cursor.
 
