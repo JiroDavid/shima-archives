@@ -7,9 +7,10 @@ Create Date: 2026-08-14 15:50:09.317444
 """
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '29cb53496a3f'
@@ -71,7 +72,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['vod_id'], ['vods.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_chat_channel_user', 'chat_messages', ['channel_id', 'username'], unique=False)
+    op.create_index(
+        'idx_chat_channel_user', 'chat_messages', ['channel_id', 'username'], unique=False
+    )
     op.create_index('idx_chat_sent_at', 'chat_messages', ['sent_at'], unique=False)
     op.create_index('idx_chat_vod', 'chat_messages', ['vod_id', 'vod_offset_secs'], unique=False)
     # ### end Alembic commands ###
