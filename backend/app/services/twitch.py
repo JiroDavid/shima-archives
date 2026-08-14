@@ -102,6 +102,44 @@ class TwitchClient:
         data: list[dict[str, Any]] = response.json().get("data", [])
         return data[0] if data else None
 
+    async def get_clips(
+        self,
+        broadcaster_id: str,
+        game_id: str | None = None,
+        started_at: str | None = None,
+        ended_at: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch a broadcaster's clips, following pagination cursors.
+
+        ``game_id``, ``started_at``, and ``ended_at`` are optional Helix
+        filters; omitted when not provided.
+        """
+        token = await self._ensure_app_token()
+        headers = {
+            "Client-Id": settings.twitch_client_id,
+            "Authorization": f"Bearer {token}",
+        }
+        clips: list[dict[str, Any]] = []
+        cursor: str | None = None
+        while True:
+            params: dict[str, str] = {"broadcaster_id": broadcaster_id, "first": "100"}
+            if game_id is not None:
+                params["game_id"] = game_id
+            if started_at is not None:
+                params["started_at"] = started_at
+            if ended_at is not None:
+                params["ended_at"] = ended_at
+            if cursor is not None:
+                params["after"] = cursor
+            response = await self._client.get("/clips", params=params, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+            clips.extend(payload.get("data", []))
+            cursor = payload.get("pagination", {}).get("cursor")
+            if not cursor:
+                break
+        return clips
+
     async def get_vod_comments(self, vod_id: str) -> list[dict[str, Any]]:
         """Fetch a VOD's full chat replay, following the comment cursor.
 

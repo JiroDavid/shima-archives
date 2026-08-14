@@ -254,6 +254,123 @@ async def test_get_vod_comments_requests_correct_path_and_auth() -> None:
     await client.aclose()
 
 
+def _make_clip(clip_id: str) -> dict[str, Any]:
+    return {
+        "id": clip_id,
+        "url": f"https://clips.twitch.tv/{clip_id}",
+        "broadcaster_id": "12345",
+        "creator_id": "999",
+        "creator_name": "Bob",
+        "video_id": "987654",
+        "game_id": "509658",
+        "title": f"clip {clip_id}",
+        "view_count": 42,
+        "created_at": "2024-01-01T00:00:00Z",
+        "thumbnail_url": "https://example.com/clip-thumb.png",
+        "duration": 30.0,
+    }
+
+
+async def test_get_clips_returns_clips() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        return httpx.Response(
+            200,
+            json={"data": [_make_clip("c1"), _make_clip("c2")], "pagination": {}},
+        )
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    clips = await client.get_clips("12345")
+
+    assert [c["id"] for c in clips] == ["c1", "c2"]
+    await client.aclose()
+
+
+async def test_get_clips_paginates_until_cursor_empty() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        after = request.url.params.get("after")
+        if after is None:
+            return httpx.Response(
+                200,
+                json={"data": [_make_clip("c1")], "pagination": {"cursor": "next"}},
+            )
+        return httpx.Response(200, json={"data": [_make_clip("c2")], "pagination": {}})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    clips = await client.get_clips("12345")
+
+    assert [c["id"] for c in clips] == ["c1", "c2"]
+    await client.aclose()
+
+
+async def test_get_clips_sends_broadcaster_id_and_optional_filters() -> None:
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        captured["broadcaster_id"] = request.url.params.get("broadcaster_id", "")
+        captured["game_id"] = request.url.params.get("game_id", "")
+        captured["started_at"] = request.url.params.get("started_at", "")
+        captured["ended_at"] = request.url.params.get("ended_at", "")
+        captured["authorization"] = request.headers.get("Authorization", "")
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    await client.get_clips(
+        "12345",
+        game_id="509658",
+        started_at="2024-01-01T00:00:00Z",
+        ended_at="2024-02-01T00:00:00Z",
+    )
+
+    assert captured["broadcaster_id"] == "12345"
+    assert captured["game_id"] == "509658"
+    assert captured["started_at"] == "2024-01-01T00:00:00Z"
+    assert captured["ended_at"] == "2024-02-01T00:00:00Z"
+    assert captured["authorization"] == "Bearer app-token"
+    await client.aclose()
+
+
+async def test_get_clips_omits_absent_filters() -> None:
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(
+                200, json={"access_token": "app-token", "expires_in": 3600}
+            )
+        captured["params"] = ",".join(sorted(request.url.params.keys()))
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.AsyncClient(transport=transport, base_url=HELIX_BASE)
+    client = TwitchClient(client=http)
+
+    await client.get_clips("12345")
+
+    assert captured["params"] == "broadcaster_id,first"
+    await client.aclose()
+
+
 async def test_get_user_sends_auth_and_client_id_headers() -> None:
     captured: dict[str, str] = {}
 
