@@ -12,7 +12,11 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
 [tool.mypy]
-python_version = "3.11"
+# Kept ahead of requires-python (3.11): numpy's stubs (pulled in
+# transitively via chromadb) use PEP 695 syntax that mypy's parser gates on
+# this setting even for stub-only files. This only affects how mypy reads
+# annotations, not the actual runtime target.
+python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 
