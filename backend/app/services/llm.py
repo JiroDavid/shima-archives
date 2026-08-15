@@ -18,9 +18,11 @@ class GeminiClient:
         self._client = client or httpx.AsyncClient(base_url=GEMINI_BASE, timeout=30.0)
 
     async def generate(self, prompt: str) -> str:
+        # API key goes in a header, not the query string — URLs are far more likely
+        # than headers to end up in access logs, proxy logs, or APM/error tracing.
         response = await self._client.post(
             f"/models/{settings.gemini_model}:generateContent",
-            params={"key": settings.gemini_api_key},
+            headers={"x-goog-api-key": settings.gemini_api_key},
             json={"contents": [{"parts": [{"text": prompt}]}]},
         )
         response.raise_for_status()

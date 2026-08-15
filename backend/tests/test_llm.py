@@ -35,7 +35,8 @@ async def test_generate_sends_prompt_and_api_key() -> None:
         import json
 
         captured["body"] = json.loads(request.read())
-        captured["has_key_param"] = "key" in request.url.params
+        captured["has_key_header"] = "x-goog-api-key" in request.headers
+        captured["key_in_url"] = "key=" in str(request.url)
         captured["path"] = request.url.path
         return httpx.Response(
             200, json={"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
@@ -45,6 +46,7 @@ async def test_generate_sends_prompt_and_api_key() -> None:
     await client.generate("hello")
 
     assert captured["body"]["contents"][0]["parts"][0]["text"] == "hello"
-    assert captured["has_key_param"] is True
+    assert captured["has_key_header"] is True
+    assert captured["key_in_url"] is False
     assert captured["path"].endswith(":generateContent")
     await client.aclose()
