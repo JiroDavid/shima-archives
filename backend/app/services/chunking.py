@@ -21,6 +21,7 @@ DEFAULT_OVERLAP = 10
 class ChatChunk:
     channel_id: int
     vod_id: int
+    twitch_vod_id: str
     text: str
     start_message_id: int
     end_message_id: int
@@ -36,6 +37,7 @@ def chunk_messages(
     *,
     vod_id: int,
     channel_id: int,
+    twitch_vod_id: str,
     window: int = DEFAULT_WINDOW,
     overlap: int = DEFAULT_OVERLAP,
 ) -> list[ChatChunk]:
@@ -52,6 +54,7 @@ def chunk_messages(
             ChatChunk(
                 channel_id=channel_id,
                 vod_id=vod_id,
+                twitch_vod_id=twitch_vod_id,
                 text="\n".join(f"{m.username}: {m.message}" for m in batch),
                 start_message_id=batch[0].id,
                 end_message_id=batch[-1].id,

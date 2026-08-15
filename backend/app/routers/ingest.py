@@ -66,7 +66,9 @@ async def trigger_ingest(
                 .order_by(ChatMessage.vod_offset_secs)
             )
         ).all()
-        chunks = chunk_messages(list(messages), vod_id=vod.id, channel_id=channel.id)
+        chunks = chunk_messages(
+            list(messages), vod_id=vod.id, channel_id=channel.id, twitch_vod_id=vod.twitch_vod_id
+        )
         if chunks:
             embeddings = await embedder.embed_texts([c.text for c in chunks])
             store.upsert_chunks(chunks, embeddings)

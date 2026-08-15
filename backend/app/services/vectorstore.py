@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any
+
 import chromadb
 from chromadb.api import ClientAPI
 
@@ -9,6 +12,15 @@ from app.core.config import settings
 from app.services.chunking import ChatChunk
 
 COLLECTION_NAME = "chat_chunks"
+
+
+@dataclass
+class ChunkMatch:
+    text: str
+    twitch_vod_id: str
+    start_message_id: int
+    start_offset_secs: int
+    end_offset_secs: int
 
 
 class ChromaStore:
@@ -28,6 +40,7 @@ class ChromaStore:
                 {
                     "channel_id": c.channel_id,
                     "vod_id": c.vod_id,
+                    "twitch_vod_id": c.twitch_vod_id,
                     "start_message_id": c.start_message_id,
                     "end_message_id": c.end_message_id,
                     "start_offset_secs": c.start_offset_secs,
@@ -37,6 +50,50 @@ class ChromaStore:
                 for c in chunks
             ],
         )
+
+    def query_chunks(
+        self,
+        embedding: list[float],
+        *,
+        top_k: int = 8,
+        channel_id: int | None = None,
+        twitch_vod_id: str | None = None,
+    ) -> list[ChunkMatch]:
+        """Nearest-neighbor search, optionally scoped to a channel and/or VOD."""
+        if self._collection.count() == 0:
+            return []
+
+        conditions: list[dict[str, Any]] = []
+        if channel_id is not None:
+            conditions.append({"channel_id": channel_id})
+        if twitch_vod_id is not None:
+            conditions.append({"twitch_vod_id": twitch_vod_id})
+        where: dict[str, Any] | None
+        if len(conditions) > 1:
+            where = {"$and": conditions}
+        elif conditions:
+            where = conditions[0]
+        else:
+            where = None
+
+        result = self._collection.query(
+            query_embeddings=[embedding],  # type: ignore[arg-type]
+            n_results=top_k,
+            where=where,
+            include=["documents", "metadatas"],
+        )
+        documents = result["documents"][0] if result["documents"] else []
+        metadatas = result["metadatas"][0] if result["metadatas"] else []
+        return [
+            ChunkMatch(
+                text=str(doc),
+                twitch_vod_id=str(meta["twitch_vod_id"]),
+                start_message_id=int(meta["start_message_id"]),  # type: ignore[arg-type]
+                start_offset_secs=int(meta["start_offset_secs"]),  # type: ignore[arg-type]
+                end_offset_secs=int(meta["end_offset_secs"]),  # type: ignore[arg-type]
+            )
+            for doc, meta in zip(documents, metadatas, strict=True)
+        ]
 
 
 _store: ChromaStore | None = None
