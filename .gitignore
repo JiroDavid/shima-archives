@@ -1,5 +1,6 @@
 # --- AI / assistant workflow files (local only, never committed) ---
 CLAUDE.md
+AGENTS.md
 RTK.md
 .claude/
 docs/
