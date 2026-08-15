@@ -25,6 +25,7 @@ class Vod(Base):
     published: Mapped[bool | None]
     thumbnail_url: Mapped[str | None] = mapped_column(String(500))
     chat_ingested: Mapped[bool] = mapped_column(default=False)
+    chunks_ingested: Mapped[bool] = mapped_column(default=False)
 
     channel: Mapped[Channel] = relationship(back_populates="vods")
     chat_messages: Mapped[list[ChatMessage]] = relationship(
