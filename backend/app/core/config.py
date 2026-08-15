@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # Embeddings / LLM
     openai_api_key: str = ""
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
 
     # Vector store
     chroma_path: str = "./chroma"
